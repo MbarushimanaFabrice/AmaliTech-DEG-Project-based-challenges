@@ -388,3 +388,39 @@ Followed by a simulated email log:
 ```
 
 ---
+
+## Design Decisions
+
+### 1. Separation of Concerns
+
+The project follows a strict layered architecture:
+
+| Layer        | File(s)                    | Responsibility                          |
+|--------------|----------------------------|-----------------------------------------|
+| Routes       | `routes/`                  | URL -> controller mapping only           |
+| Controllers  | `controllers/`             | HTTP parsing, response shaping          |
+| Services     | `services/`                | All business logic                      |
+| Store        | `services/monitorStore.js` | Single source of truth for data         |
+| Utilities    | `utils/`                   | Pure helpers (validators, time)         |
+
+This makes each layer independently testable and replaceable (e.g., swap the store for Redis with no controller changes).
+
+### 2. Timer Safety
+
+- Every `start()` call first calls `_clearTimer()` to prevent duplicate timers for the same ID (a common bug).
+- `handle.unref()` is called so pending timers don't prevent Node.js from exiting in test environments.
+- If a timer fires while the monitor is `paused` (race condition), the alert is suppressed.
+
+### 3. No External Validation Library
+
+Validation is hand-rolled in `utils/validators.js` to keep dependencies minimal and boot time fast. In a larger service, `zod` or `joi` would be appropriate.
+
+### 4. Singleton Services
+
+`monitorStore`, `timerService`, `monitorService`, and `alertService` are all singletons (module-level instances). Node's module cache ensures every `require()` returns the same object, giving us shared state without a global variable.
+
+### 5. Heartbeat Revives Downed Monitors
+
+A heartbeat on a `down` monitor transitions it back to `active` and restarts the timer. This handles the real-world case where a device recovers on its own without manual intervention.
+
+---
