@@ -424,3 +424,47 @@ Validation is hand-rolled in `utils/validators.js` to keep dependencies minimal 
 A heartbeat on a `down` monitor transitions it back to `active` and restarts the timer. This handles the real-world case where a device recovers on its own without manual intervention.
 
 ---
+
+
+## Developer's Choice Feature
+
+### `GET /monitors/stats` — Fleet-Level Statistics Dashboard
+
+#### What it does
+
+Returns aggregate counts by status (`active`, `paused`, `down`) and total missed beats across all registered monitors in a single API call.
+
+#### Why I added it
+
+In a real deployment, CritMon engineers need a **dashboard endpoint** to answer:
+- *"How many of my 500 devices are currently down?"*
+- *"How many missed beats happened overnight?"*
+
+Without this, they'd have to fetch `GET /monitors` (potentially a large payload), load it into memory, and compute these numbers client-side — wasteful and slow.
+
+The `/stats` endpoint computes this server-side in O(n) time and returns a tiny JSON summary. This is the foundation for a monitoring dashboard or a Grafana data source integration.
+
+#### Future extension
+
+In production this would be extended to include:
+- `p50`/`p95` heartbeat intervals per device
+- Per-alert-email grouping for team routing
+- Time-windowed stats (alerts in the last 24h)
+
+---
+
+## How the System Works
+
+1. **Registration** — `POST /monitors` validates input, creates a monitor record in the in-memory `Map`, and calls `timerService.start(id)` which schedules a `setTimeout` for `timeout` seconds.
+
+2. **Heartbeat** — `POST /monitors/:id/heartbeat` calls `timerService.reset(id)`, which clears the old `setTimeout` and schedules a new one from scratch. The monitor's `lastHeartbeat` is updated.
+
+3. **Expiry** — When the `setTimeout` fires, `_onExpired(id)` sets `status = 'down'`, calls `alertService.fireDownAlert()` which logs the structured JSON alert and simulates an email.
+
+4. **Pause** — `POST /monitors/:id/pause` calls `timerService.stop(id)` (`clearTimeout`) and sets `status = 'paused'`. No alert will fire.
+
+5. **Resume** — Either `POST /monitors/:id/resume` or a subsequent heartbeat sets `status = 'active'` and restarts the timer.
+
+6. **Delete** — `DELETE /monitors/:id` cancels the timer and removes the record from the store.
+
+---
