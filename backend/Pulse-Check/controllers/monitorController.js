@@ -58,3 +58,39 @@ exports.pause = (req, res, next) => {
     next(err);
   }
 };
+
+
+exports.resume = (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = monitorService.resume(id);
+
+    if (!result.ok) {
+      const status = result.code === 'NOT_FOUND' ? 404 : 409;
+      return res.status(status).json({ error: result.message, code: result.code });
+    }
+
+    return res.status(200).json({
+      message: `Monitor '${id}' resumed. Timer restarted from full ${result.monitor.timeout}s.`,
+      monitor: result.monitor,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+exports.list = (req, res, next) => {
+  try {
+    const { status } = req.query;
+    const validStatuses = ['active', 'paused', 'down'];
+    if (status && !validStatuses.includes(status)) {
+      return res.status(400).json({
+        error: `Invalid status filter. Must be one of: ${validStatuses.join(', ')}`,
+      });
+    }
+
+    const result = monitorService.list(status);
+    return res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
