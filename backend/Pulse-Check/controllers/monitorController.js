@@ -94,3 +94,30 @@ exports.list = (req, res, next) => {
     next(err);
   }
 };
+
+exports.getOne = (req, res, next) => {
+  try {
+    const result = monitorService.get(req.params.id);
+    if (!result.ok) return res.status(404).json({ error: result.message, code: result.code });
+    return res.status(200).json({ monitor: result.monitor });
+  } catch (err) {
+    next(err);
+  }
+};
+exports.remove = (req, res, next) => {
+  try {
+    const result = monitorService.delete(req.params.id);
+    if (!result.ok) return res.status(404).json({ error: result.message, code: result.code });
+    return res.status(200).json({ message: result.message });
+  } catch (err) {
+    next(err);
+  }
+};
+exports.stats = (req, res, next) => {
+  try {
+    const result = monitorService.stats();
+    return res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
