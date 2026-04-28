@@ -1,0 +1,23 @@
+{
+  "name": "pulse-check-api",
+  "version": "1.0.0",
+  "description": "Dead Man's Switch API for CritMon Servers Inc. — monitors remote device heartbeats and alerts when devices go silent.",
+  "main": "/app.js",
+  "scripts": {
+    "start": "node /app.js",
+    "dev": "nodemon /app.js"
+  },
+  "keywords": ["monitoring", "heartbeat", "deadmans-switch", "watchdog"],
+  "author": "Pulse-Check-API",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
